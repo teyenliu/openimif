@@ -9,8 +9,10 @@ from functions import *
 class imif_digits:
     # Constructor
     def __init__(self):
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.8)
         # Interactive session
-        self.sess = tf.InteractiveSession()
+        config=tf.ConfigProto(gpu_options=gpu_options,log_device_placement=True)
+        self.sess = tf.InteractiveSession(config=config)
 
         # Nodes for the input images and target output classes
         self.x = tf.placeholder("float", shape=[None, 784])
@@ -47,7 +49,6 @@ class imif_digits:
         self.h_pool2_flat = tf.reshape(self.h_pool2, [-1, 7*7*64])
         self.h_fc1 = tf.nn.relu(tf.matmul(self.h_pool2_flat, self.W_fc1) + self.b_fc1)
 
-
         self.keep_prob = tf.placeholder("float")
         self.h_fc1_drop = tf.nn.dropout(self.h_fc1, self.keep_prob)
 
@@ -69,11 +70,13 @@ class imif_digits:
 
     # Trains and saves model
     def train_and_save_model(self, data_location, save_location):
+        # Add ops to save and restore all the variables.
+
         # Our training data
         mnist = input_data.read_data_sets(data_location, one_hot=True)
 
         for i in range(20000):
-            batch = mnist.train.next_batch(50)
+            batch = mnist.train.next_batch(100)
             if i%100 == 0:
                 train_accuracy = self.accuracy.eval(feed_dict={
                     self.x:batch[0], self.y_: batch[1], self.keep_prob: 1.0
@@ -82,7 +85,8 @@ class imif_digits:
             self.train_step.run(feed_dict={self.x: batch[0], self.y_: batch[1], self.keep_prob: 0.5})
 
         # Saves path
-        save_path = saver.save(sess, save_location)
+        self.saver = tf.train.Saver()
+        save_path = self.saver.save(self.sess, save_location)
         print("Model saved in file: ", save_path)
 
     # Loads saved model
